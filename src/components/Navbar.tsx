@@ -1,295 +1,327 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
-  FiMenu, 
-  FiX, 
-  FiHome, 
-  FiBell, 
-  FiUser, 
-  FiSettings, 
-  FiLogOut, 
-  FiSun, 
-  FiMoon
-} from 'react-icons/fi';
+  Menu, 
+  X, 
+  Bell, 
+  User, 
+  Settings, 
+  LogOut, 
+  Sun, 
+  Moon,
+  Search,
+  Command,
+  ChevronDown,
+  FileText,
+  Shield,
+} from 'lucide-react';
 import { useThemeStore } from '../Zustand/themeStore';
 import type { NotificationItem } from '../types/notifcations';
-import { IoShuffleSharp } from 'react-icons/io5';
-import { LiaWindowCloseSolid } from 'react-icons/lia';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
+
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface NavbarProps {
   onToggleSidebar?: () => void;
   isOpen?: boolean; 
   isAdmin?: boolean;    
-    notifications?: NotificationItem[];
+  notifications?: NotificationItem[];
 }
 
 export default function Navbar({ onToggleSidebar, isOpen, isAdmin, notifications }: NavbarProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   
   const { theme, toggleTheme } = useThemeStore();
-  const isDark = theme === 'dark';
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      toast.success('Signed out successfully');
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Logout failed:', error);
+      toast.error('Failed to sign out');
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
-  const toggleNotifDropdown = () => {
-    setIsNotifOpen(!isNotifOpen);
-  };
-
-  const relaall = () => {
-    // Reveal all notifications function
-    console.log('Reveal all notifications', notifications);
-    // Add your logic here to handle revealing all notifications
-  };
+  // Get user display info
+  const userDisplayName = user ? `${user.firstName} ${user.lastName}` : 'Guest';
+  const userEmail = user?.email || '';
+  const userInitial = user?.firstName?.[0]?.toUpperCase() || 'U';
 
   const notificationCount = notifications?.length || 0;
-  const displayedNotifications = notifications?.slice(0, 3) || [];
+  const displayedNotifications = notifications?.slice(0, 5) || [];
 
   return (
-    <nav className={`sticky top-0 z-50 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} transition-all duration-300`}>
-      <div className="max-w-full mx-auto  sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          <div className="flex-shrink-0 flex items-center">
-            {isAdmin ? (
-            <button
-              onClick={() => {
-                onToggleSidebar?.();
-              }}
-              className={`p-2.5 rounded-lg transition-all duration-200 ${isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600'}`}
-              aria-label="Toggle sidebar"
-            >
-              {isOpen ? <LiaWindowCloseSolid    size={20} /> : <IoShuffleSharp size={20} />}
-            </button>
-            ) : (
-              <div className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                inteli
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-16 items-center justify-between px-4 md:px-6">
+        {/* Left section */}
+        <div className="flex items-center gap-4">
+          {isAdmin ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onToggleSidebar}
+                  className="h-9 w-9"
+                >
+                  {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {isOpen ? 'Close sidebar' : 'Open sidebar'}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+                <FileText className="h-5 w-5 text-primary-foreground" />
               </div>
-            )}
-          </div>
+              <span className="text-xl font-bold">DocManager</span>
+            </div>
+          )}
 
-
-              
-          {/* Desktop Menu */}
-          <div className="hidden md:flex md:items-center md:space-x-2">
-            {/* Notification Icon */}
-            <div className="relative">
-              <button 
-                onClick={toggleNotifDropdown}
-                className={`relative p-2.5 rounded-lg transition-all duration-200 ${isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600'}`}
+          {/* Search trigger for command palette */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                className="hidden md:flex items-center gap-2 text-muted-foreground h-9 w-64 justify-start"
+                onClick={() => {
+                  // Trigger command palette with keyboard event
+                  const event = new KeyboardEvent('keydown', {
+                    key: 'k',
+                    metaKey: true,
+                    bubbles: true,
+                  });
+                  document.dispatchEvent(event);
+                }}
               >
-                <FiBell size={20} />
-                {notificationCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg animate-pulse">
-                    {notificationCount > 9 ? '9+' : notificationCount}
-                  </span>
-                )}
-              </button>
+                <Search className="h-4 w-4" />
+                <span className="text-sm">Search...</span>
+                <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                  <span className="text-xs">⌘</span>K
+                </kbd>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              Quick search and commands
+            </TooltipContent>
+          </Tooltip>
+        </div>
 
-              {/* Notification Dropdown */}
-              {isNotifOpen && (
-                <div className={`absolute right-0 mt-3 w-96 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-2xl py-3 z-50 border transition-all duration-200 max-h-96 overflow-y-auto`}>
-                  <div className={`px-4 py-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-                    <h3 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Notifications</h3>
-                  </div>
+        {/* Right section */}
+        <div className="flex items-center gap-2">
+          {/* Mobile search */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden h-9 w-9"
+                onClick={() => {
+                  const event = new KeyboardEvent('keydown', {
+                    key: 'k',
+                    metaKey: true,
+                    bubbles: true,
+                  });
+                  document.dispatchEvent(event);
+                }}
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Search</TooltipContent>
+          </Tooltip>
 
-                  {/* Notifications List */}
-                  {displayedNotifications && displayedNotifications.length > 0 ? (
-                    <div className="max-h-80 overflow-y-auto">
-                      {displayedNotifications.map((notif) => (
-                        <div
-                          key={notif.id}
-                          className={`px-4 py-3 border-b ${isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-100 hover:bg-gray-50'} transition-colors duration-150`}
-                        >
-                          <div className="flex items-start gap-3">
-                            {/* Notification Icon based on type */}
-                            <div className={`p-2 rounded-lg flex-shrink-0 ${
-                              notif.type === 'info' ? (isDark ? 'bg-blue-900' : 'bg-blue-100') :
-                              notif.type === 'success' ? (isDark ? 'bg-green-900' : 'bg-green-100') :
-                              notif.type === 'warning' ? (isDark ? 'bg-yellow-900' : 'bg-yellow-100') :
-                              (isDark ? 'bg-red-900' : 'bg-red-100')
-                            }`}>
-                              <div className={`text-lg ${
-                                notif.type === 'info' ? (isDark ? 'text-blue-400' : 'text-blue-600') :
-                                notif.type === 'success' ? (isDark ? 'text-green-400' : 'text-green-600') :
-                                notif.type === 'warning' ? (isDark ? 'text-yellow-400' : 'text-yellow-600') :
-                                (isDark ? 'text-red-400' : 'text-red-600')
-                              }`}>
-                                {notif.type === 'info' ? 'ℹ️' :
-                                 notif.type === 'success' ? '✓' :
-                                 notif.type === 'warning' ? '⚠️' : '✕'}
-                              </div>
-                            </div>
-
-                            {/* Notification Content */}
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                {notif.title}
-                              </p>
-                              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                {notif.message}
-                              </p>
-                              <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                                {notif.time}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className={`px-4 py-8 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      <p className="text-sm">No notifications</p>
-                    </div>
-                  )}
-
-                  {/* View All Button */}
+          {/* Notifications */}
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative h-9 w-9">
+                    <Bell className="h-5 w-5" />
+                    {notificationCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                        {notificationCount > 9 ? '9+' : notificationCount}
+                      </span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Notifications</TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">Notifications</span>
                   {notificationCount > 0 && (
-                    <button
-                      onClick={() => {
-                        relaall();
-                        setIsNotifOpen(false);
-                      }}
-                      className={`w-full px-4 py-3 border-t ${isDark ? 'border-gray-700 text-blue-400 hover:bg-gray-700' : 'border-gray-100 text-blue-600 hover:bg-gray-50'} text-sm font-medium transition-colors duration-150`}
-                    >
-                      View all notifications
-                    </button>
+                    <Badge variant="secondary" className="ml-2">
+                      {notificationCount}
+                    </Badge>
                   )}
                 </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {displayedNotifications.length > 0 ? (
+                <ScrollArea className="h-[300px]">
+                  {displayedNotifications.map((notif) => (
+                    <DropdownMenuItem key={notif.id} className="flex flex-col items-start gap-1 p-3 cursor-pointer">
+                      <div className="flex items-center gap-2 w-full">
+                        <div className={`h-2 w-2 rounded-full ${
+                          notif.type === 'info' ? 'bg-blue-500' :
+                          notif.type === 'success' ? 'bg-green-500' :
+                          notif.type === 'warning' ? 'bg-yellow-500' :
+                          'bg-red-500'
+                        }`} />
+                        <span className="font-medium text-sm">{notif.title}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 pl-4">
+                        {notif.message}
+                      </p>
+                      <span className="text-[10px] text-muted-foreground pl-4">
+                        {notif.time}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </ScrollArea>
+              ) : (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  No notifications
+                </div>
               )}
-            </div>
+              {notificationCount > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-center justify-center text-primary cursor-pointer">
+                    View all notifications
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className={`p-2.5 rounded-lg transition-all duration-200 hover:rotate-12 transform ${isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-yellow-400' : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600'}`}
-              aria-label="Toggle theme"
-            >
-              {isDark ? <FiSun size={20} /> : <FiMoon size={20} />}
-            </button>
-
-            {/* User Dropdown */}
-            <div className="relative ml-2">
-              <button
-                onClick={toggleDropdown}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+          {/* Theme Toggle */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                className="h-9 w-9"
               >
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold shadow-md transition-all duration-300 ${isDark ? 'bg-gradient-to-br from-blue-500 to-purple-600' : 'bg-gradient-to-br from-yellow-400 to-orange-500'}`}>
-                  <FiUser size={16} />
-                </div>
-                <span className={`hidden lg:block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Profile</span>
-              </button>
-              
-              {isDropdownOpen && (
-                <div className={`absolute right-0 mt-3 w-64 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-2xl py-3 z-50 border transition-all duration-200`}>
-                  <div className={`px-4 py-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-                    <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>John Doe</p>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>john@example.com</p>
-                  </div>
-                  <a
-                    href="/profile"
-                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium ${isDark ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'} transition-colors duration-150`}
-                    onClick={() => setIsDropdownOpen(false)}
-                  >
-                    <FiUser size={18} className={isDark ? 'text-blue-400' : 'text-blue-600'} />
-                    My Profile
-                  </a>
-                  <a
-                    href="/settings"
-                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium ${isDark ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'} transition-colors duration-150`}
-                    onClick={() => setIsDropdownOpen(false)}
-                  >
-                    <FiSettings size={18} className={isDark ? 'text-blue-400' : 'text-blue-600'} />
-                    Settings
-                  </a>
-                  <div className={`border-t ${isDark ? 'border-gray-700' : 'border-gray-100'} my-2`}></div>
-                  <a
-                    href="/logout"
-                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium ${isDark ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300' : 'text-red-600 hover:bg-red-50 hover:text-red-700'} transition-colors duration-150`}
-                    onClick={() => setIsDropdownOpen(false)}
-                  >
-                    <FiLogOut size={18} />
-                    Logout
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
+                {theme === 'dark' ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Toggle {theme === 'dark' ? 'light' : 'dark'} mode
+            </TooltipContent>
+          </Tooltip>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center gap-2">
-            <button
-              onClick={toggleTheme}
-              className={`p-2.5 rounded-lg transition-all duration-200 ${isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-yellow-400' : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600'}`}
-              aria-label="Toggle theme"
-            >
-              {isDark ? <FiSun size={20} /> : <FiMoon size={20} />}
-            </button>
-            <button
-              onClick={toggleMenu}
-              className={`p-2.5 rounded-lg focus:outline-none transition-all duration-200 ${isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600'}`}
-            >
-              {isMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
-            </button>
-          </div>
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-9 gap-2 px-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground font-semibold">
+                    {userInitial}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="hidden lg:flex flex-col items-start">
+                  <span className="text-sm font-medium leading-none">{userDisplayName}</span>
+                  <span className="text-xs text-muted-foreground">{user?.role}</span>
+                </div>
+                <ChevronDown className="h-4 w-4 text-muted-foreground hidden lg:block" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{userDisplayName}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {userEmail}
+                  </p>
+                  <Badge variant={user?.role === 'admin' ? 'default' : 'secondary'} className="w-fit mt-1.5 text-xs">
+                    {user?.role === 'admin' ? (
+                      <><Shield className="h-3 w-3 mr-1" /> Admin</>
+                    ) : (
+                      <><User className="h-3 w-3 mr-1" /> User</>
+                    )}
+                  </Badge>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                  <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                  <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="cursor-pointer"
+                  onClick={() => {
+                    const event = new KeyboardEvent('keydown', {
+                      key: 'k',
+                      metaKey: true,
+                      bubbles: true,
+                    });
+                    document.dispatchEvent(event);
+                  }}
+                >
+                  <Command className="mr-2 h-4 w-4" />
+                  <span>Command Menu</span>
+                  <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="cursor-pointer text-destructive focus:text-destructive"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>{isLoggingOut ? 'Signing out...' : 'Sign out'}</span>
+                <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-
-      {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className={`md:hidden border-t ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
-          <div className="px-3 pt-2 pb-3 space-y-1">
-            <a
-              href="/"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 ${isDark ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'}`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <FiHome size={20} />
-              Home
-            </a>
-            <a
-              href="/notifications"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 ${isDark ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'}`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <FiBell size={20} />
-              Notifications
-              <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 ml-auto font-bold">3</span>
-            </a>
-            <div className={`border-t ${isDark ? 'border-gray-700' : 'border-gray-200'} my-3`}></div>
-            <a
-              href="/profile"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 ${isDark ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'}`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <FiUser size={20} />
-              Profile
-            </a>
-            <a
-              href="/settings"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 ${isDark ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'}`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <FiSettings size={20} />
-              Settings
-            </a>
-            <a
-              href="/logout"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 ${isDark ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300' : 'text-red-600 hover:bg-red-50 hover:text-red-700'}`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <FiLogOut size={20} />
-              Logout
-            </a>
-          </div>
-        </div>
-      )}
-    </nav>
+    </header>
   );
 }

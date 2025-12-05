@@ -2,16 +2,17 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import Navbar from '../components/Navbar';
-import { useTheme } from '../Zustand/themeStore';
 import { Documents } from './Documents';
 import { Users } from './Users';
+import { useAuth } from '../context/AuthContext';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 export const Dashboard = () => {
-  const theme = useTheme();
-  const isDark = theme === 'dark';
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -33,12 +34,26 @@ export const Dashboard = () => {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className="min-h-screen bg-background">
       {isSidebarOpen && <Sidebar onItemClick={handleSidebarItemClick} />}
-      <div className={`flex flex-col ${isSidebarOpen ? 'ml-64' : 'ml-0'} transition-all duration-300`}>
-        <Navbar onToggleSidebar={toggleSidebar} isOpen={isSidebarOpen} />
+      <div className={cn(
+        "flex flex-col transition-all duration-300",
+        isSidebarOpen ? 'ml-64' : 'ml-0'
+      )}>
+        <Navbar onToggleSidebar={toggleSidebar} isOpen={isSidebarOpen} isAdmin={true} />
         <main className="flex-1 p-8">
           <div className="max-w-7xl mx-auto">
+            {/* Welcome message */}
+            <Card className="mb-6">
+              <CardContent className="p-6">
+                <h1 className="text-2xl font-bold">
+                  Welcome back, {user?.firstName || 'Admin'}!
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  You have full administrative access to manage documents and users.
+                </p>
+              </CardContent>
+            </Card>
             {renderContent()}
           </div>
         </main>
